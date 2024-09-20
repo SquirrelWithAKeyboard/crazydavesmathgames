@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bird Flap</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: lightblue;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: skyblue;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="flapCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('flapCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth * 0.75;
+    canvas.height = window.innerHeight * 0.75;
+
+    // Bird settings
+    const bird = { x: 50, y: canvas.height / 2, size: 20, dy: 0 };
+    const gravity = 0.5, jumpHeight = -10;
+    let obstacles = [];
+    let frame = 0;
+
+    // Draw bird
+    function drawBird() {
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // Create and draw obstacles
+    function createObstacle() {
+        const height = Math.random() * (canvas.height / 2) + 50;
+        obstacles.push({ x: canvas.width, height: height, width: 20, gap: 150 });
+    }
+
+    function drawObstacles() {
+        ctx.fillStyle = 'green';
+        for (let i = 0; i < obstacles.length; i++) {
+            let obstacle = obstacles[i];
+            ctx.fillRect(obstacle.x, 0, obstacle.width, obstacle.height);  // Top obstacle
+            ctx.fillRect(obstacle.x, obstacle.height + obstacle.gap, obstacle.width, canvas.height);  // Bottom obstacle
+        }
+    }
+
+    function moveObstacles() {
+        for (let i = 0; i < obstacles.length; i++) {
+            obstacles[i].x -= 2;
+        }
+
+        // Remove off-screen obstacles
+        obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
+    }
+
+    function moveBird() {
+        bird.dy += gravity;
+        bird.y += bird.dy;
+
+        if (bird.y + bird.size > canvas.height || bird.y - bird.size < 0) {
+            resetGame();
+        }
+    }
+
+    function resetGame() {
+        bird.y = canvas.height / 2;
+        bird.dy = 0;
+        obstacles = [];
+        frame = 0;
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawBird();
+        moveBird();
+
+        if (frame % 150 === 0) createObstacle();
+        drawObstacles();
+        moveObstacles();
+
+        frame++;
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === ' ') bird.dy = jumpHeight;
+    });
+
+    gameLoop();
+</script>
+
+</body>
+</html>
