@@ -64,6 +64,7 @@
 <div class="controls">
     <div id="left" class="btn">&#9664;</div>
     <div id="right" class="btn">&#9654;</div>
+    <div id="shoot" class="btn">Shoot</div>
 </div>
 
 <script>
@@ -83,19 +84,21 @@
         speed: 5
     };
 
-    // Asteroid settings
-    const asteroids = [];
-    const asteroidFrequency = 90;  // Frequency of asteroid appearance (every 90 frames)
+    // Game settings
+    let difficulty = 1;
+    let asteroidFrequency = 90;  // Frequency of asteroid appearance
     let asteroidTimer = 0;
-
-    // Game variables
-    let gameOver = false;
     let score = 0;
+    let gameOver = false;
 
+    const asteroids = [];
+    const lasers = [];
+    
     // Control player movement
     const keys = {
         left: false,
-        right: false
+        right: false,
+        shoot: false
     };
 
     // Handle arrow key press events for desktop
@@ -106,6 +109,9 @@
                 break;
             case 'ArrowRight':
                 keys.right = true;
+                break;
+            case ' ':
+                keys.shoot = true;
                 break;
         }
     });
@@ -118,6 +124,9 @@
             case 'ArrowRight':
                 keys.right = false;
                 break;
+            case ' ':
+                keys.shoot = false;
+                break;
         }
     });
 
@@ -128,23 +137,42 @@
     document.getElementById('right').addEventListener('touchstart', () => keys.right = true);
     document.getElementById('right').addEventListener('touchend', () => keys.right = false);
 
-    // Create new asteroids
+    document.getElementById('shoot').addEventListener('touchstart', () => keys.shoot = true);
+    document.getElementById('shoot').addEventListener('touchend', () => keys.shoot = false);
+
+    // Function to create new asteroids
     function createAsteroid() {
         const asteroid = {
             x: Math.random() * (canvas.width - 40),
             y: -40,
-            width: 40,
-            height: 40,
+            radius: 20 + Math.random() * 30,  // More circular asteroids
             color: 'gray',
-            speed: 3 + Math.random() * 3
+            speed: 2 + Math.random() * 2 * difficulty
         };
         asteroids.push(asteroid);
+    }
+
+    // Function to create new lasers
+    function createLaser() {
+        const laser = {
+            x: spaceship.x + spaceship.width / 2 - 2.5,
+            y: spaceship.y - 10,
+            width: 5,
+            height: 20,
+            color: 'red',
+            speed: 7
+        };
+        lasers.push(laser);
     }
 
     // Function to update player (spaceship) position
     function updateSpaceship() {
         if (keys.left && spaceship.x > 0) spaceship.x -= spaceship.speed;
         if (keys.right && spaceship.x + spaceship.width < canvas.width) spaceship.x += spaceship.speed;
+        if (keys.shoot) {
+            createLaser();
+            keys.shoot = false;  // Prevent continuous shooting
+        }
     }
 
     // Function to update asteroid positions
@@ -153,10 +181,10 @@
             asteroids[i].y += asteroids[i].speed;
 
             // Check for collision between spaceship and asteroids
-            if (spaceship.x < asteroids[i].x + asteroids[i].width &&
-                spaceship.x + spaceship.width > asteroids[i].x &&
-                spaceship.y < asteroids[i].y + asteroids[i].height &&
-                spaceship.y + spaceship.height > asteroids[i].y) {
+            if (spaceship.x < asteroids[i].x + asteroids[i].radius &&
+                spaceship.x + spaceship.width > asteroids[i].x - asteroids[i].radius &&
+                spaceship.y < asteroids[i].y + asteroids[i].radius &&
+                spaceship.y + spaceship.height > asteroids[i].y - asteroids[i].radius) {
                 gameOver = true;
                 document.getElementById('gameOver').style.display = 'block';
             }
@@ -170,15 +198,47 @@
         }
     }
 
+    // Function to update laser positions and detect collisions
+    function updateLasers() {
+        for (let i = 0; i < lasers.length; i++) {
+            lasers[i].y -= lasers[i].speed;
+
+            // Check for collision between lasers and asteroids
+            for (let j = 0; j < asteroids.length; j++) {
+                if (lasers[i].x < asteroids[j].x + asteroids[j].radius &&
+                    lasers[i].x + lasers[i].width > asteroids[j].x - asteroids[j].radius &&
+                    lasers[i].y < asteroids[j].y + asteroids[j].radius &&
+                    lasers[i].y + lasers[i].height > asteroids[j].y - asteroids[j].radius) {
+                    // Remove both laser and asteroid
+                    asteroids.splice(j, 1);
+                    lasers.splice(i, 1);
+                    score += 5;
+                    i--;
+                    break;
+                }
+            }
+
+            // Remove laser if it goes off the screen
+            if (lasers[i] && lasers[i].y < 0) {
+                lasers.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
     // Main game loop
     function gameLoop() {
         if (gameOver) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Update player and asteroids
+        // Increase difficulty over time
+        difficulty = Math.floor(score / 20) + 1;
+
+        // Update player, asteroids, and lasers
         updateSpaceship();
         updateAsteroids();
+        updateLasers();
 
         // Create asteroids over time
         if (asteroidTimer === asteroidFrequency) {
@@ -188,20 +248,33 @@
             asteroidTimer++;
         }
 
-        // Draw spaceship
+        // Draw spaceship (as a triangle)
         ctx.fillStyle = spaceship.color;
-        ctx.fillRect(spaceship.x, spaceship.y, spaceship.width, spaceship.height);
+        ctx.beginPath();
+        ctx.moveTo(spaceship.x + spaceship.width / 2, spaceship.y);  // Top point
+        ctx.lineTo(spaceship.x, spaceship.y + spaceship.height);  // Bottom left
+        ctx.lineTo(spaceship.x + spaceship.width, spaceship.y + spaceship.height);  // Bottom right
+        ctx.closePath();
+        ctx.fill();
 
-        // Draw asteroids
+        // Draw asteroids (as circles)
         for (let i = 0; i < asteroids.length; i++) {
             ctx.fillStyle = asteroids[i].color;
-            ctx.fillRect(asteroids[i].x, asteroids[i].y, asteroids[i].width, asteroids[i].height);
+            ctx.beginPath();
+            ctx.arc(asteroids[i].x, asteroids[i].y, asteroids[i].radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw lasers
+        for (let i = 0; i < lasers.length; i++) {
+            ctx.fillStyle = lasers[i].color;
+            ctx.fillRect(lasers[i].x, lasers[i].y, lasers[i].width, lasers[i].height);
         }
 
         // Draw score
         ctx.fillStyle = 'white';
         ctx.font = '20px Arial';
-        ctx.fillText('Score: ' + score, 10, 30);
+        ctx.fillText('Score: ' + score + ' | Difficulty: ' + difficulty, 10, 30);
 
         requestAnimationFrame(gameLoop);
     }
