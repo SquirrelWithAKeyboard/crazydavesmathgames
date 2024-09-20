@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="pongCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('pongCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth * 0.75;
+    canvas.height = window.innerHeight * 0.75;
+
+    // Paddle settings
+    const paddleHeight = 100, paddleWidth = 10, paddleSpeed = 7;
+    const playerPaddle = { x: 10, y: (canvas.height - paddleHeight) / 2 };
+    const aiPaddle = { x: canvas.width - paddleWidth - 10, y: (canvas.height - paddleHeight) / 2 };
+
+    // Ball settings
+    const ball = { x: canvas.width / 2, y: canvas.height / 2, radius: 10, dx: 5, dy: 5 };
+
+    function drawPaddle(x, y) {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(x, y, paddleWidth, paddleHeight);
+    }
+
+    function drawBall(x, y) {
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(x, y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function moveBall() {
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+            ball.dy = -ball.dy;
+        }
+
+        if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+            ball.dx = -ball.dx;  // Simulate a bounce for now
+        }
+    }
+
+    function movePaddle() {
+        // Move the player paddle
+        if (keys.up && playerPaddle.y > 0) playerPaddle.y -= paddleSpeed;
+        if (keys.down && playerPaddle.y + paddleHeight < canvas.height) playerPaddle.y += paddleSpeed;
+
+        // AI paddle movement
+        if (aiPaddle.y + paddleHeight / 2 < ball.y) aiPaddle.y += paddleSpeed;
+        if (aiPaddle.y + paddleHeight / 2 > ball.y) aiPaddle.y -= paddleSpeed;
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPaddle(playerPaddle.x, playerPaddle.y);
+        drawPaddle(aiPaddle.x, aiPaddle.y);
+        drawBall(ball.x, ball.y);
+
+        moveBall();
+        movePaddle();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    const keys = { up: false, down: false };
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') keys.up = true;
+        if (e.key === 'ArrowDown') keys.down = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp') keys.up = false;
+        if (e.key === 'ArrowDown') keys.down = false;
+    });
+
+    gameLoop();
+</script>
+
+</body>
+</html>
