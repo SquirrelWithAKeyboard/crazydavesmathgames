@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Adventure</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+            background-color: #000;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 40px;
+            display: none;
+        }
+
+        /* Mobile controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            line-height: 50px;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .btn:active {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div id="gameOver">Game Over!</div>
+
+<!-- Mobile Controls -->
+<div class="controls">
+    <div id="left" class="btn">&#9664;</div>
+    <div id="right" class="btn">&#9654;</div>
+</div>
+
+<script>
+    // Set up the canvas
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Player (spaceship) settings
+    const spaceship = {
+        x: canvas.width / 2 - 20,
+        y: canvas.height - 60,
+        width: 40,
+        height: 60,
+        color: 'white',
+        speed: 5
+    };
+
+    // Asteroid settings
+    const asteroids = [];
+    const asteroidFrequency = 90;  // Frequency of asteroid appearance (every 90 frames)
+    let asteroidTimer = 0;
+
+    // Game variables
+    let gameOver = false;
+    let score = 0;
+
+    // Control player movement
+    const keys = {
+        left: false,
+        right: false
+    };
+
+    // Handle arrow key press events for desktop
+    window.addEventListener('keydown', (e) => {
+        switch (e.key) {
+            case 'ArrowLeft':
+                keys.left = true;
+                break;
+            case 'ArrowRight':
+                keys.right = true;
+                break;
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        switch (e.key) {
+            case 'ArrowLeft':
+                keys.left = false;
+                break;
+            case 'ArrowRight':
+                keys.right = false;
+                break;
+        }
+    });
+
+    // Handle touch input for mobile controls
+    document.getElementById('left').addEventListener('touchstart', () => keys.left = true);
+    document.getElementById('left').addEventListener('touchend', () => keys.left = false);
+
+    document.getElementById('right').addEventListener('touchstart', () => keys.right = true);
+    document.getElementById('right').addEventListener('touchend', () => keys.right = false);
+
+    // Create new asteroids
+    function createAsteroid() {
+        const asteroid = {
+            x: Math.random() * (canvas.width - 40),
+            y: -40,
+            width: 40,
+            height: 40,
+            color: 'gray',
+            speed: 3 + Math.random() * 3
+        };
+        asteroids.push(asteroid);
+    }
+
+    // Function to update player (spaceship) position
+    function updateSpaceship() {
+        if (keys.left && spaceship.x > 0) spaceship.x -= spaceship.speed;
+        if (keys.right && spaceship.x + spaceship.width < canvas.width) spaceship.x += spaceship.speed;
+    }
+
+    // Function to update asteroid positions
+    function updateAsteroids() {
+        for (let i = 0; i < asteroids.length; i++) {
+            asteroids[i].y += asteroids[i].speed;
+
+            // Check for collision between spaceship and asteroids
+            if (spaceship.x < asteroids[i].x + asteroids[i].width &&
+                spaceship.x + spaceship.width > asteroids[i].x &&
+                spaceship.y < asteroids[i].y + asteroids[i].height &&
+                spaceship.y + spaceship.height > asteroids[i].y) {
+                gameOver = true;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+
+            // Remove asteroid if it goes off the screen
+            if (asteroids[i].y > canvas.height) {
+                asteroids.splice(i, 1);
+                score++;
+                i--;
+            }
+        }
+    }
+
+    // Main game loop
+    function gameLoop() {
+        if (gameOver) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update player and asteroids
+        updateSpaceship();
+        updateAsteroids();
+
+        // Create asteroids over time
+        if (asteroidTimer === asteroidFrequency) {
+            createAsteroid();
+            asteroidTimer = 0;
+        } else {
+            asteroidTimer++;
+        }
+
+        // Draw spaceship
+        ctx.fillStyle = spaceship.color;
+        ctx.fillRect(spaceship.x, spaceship.y, spaceship.width, spaceship.height);
+
+        // Draw asteroids
+        for (let i = 0; i < asteroids.length; i++) {
+            ctx.fillStyle = asteroids[i].color;
+            ctx.fillRect(asteroids[i].x, asteroids[i].y, asteroids[i].width, asteroids[i].height);
+        }
+
+        // Draw score
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.fillText('Score: ' + score, 10, 30);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+
+</body>
+</html>
